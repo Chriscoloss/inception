@@ -1,0 +1,72 @@
+############################################
+# --------------- NETWORKS --------------- #
+############################################
+
+networks:
+  inception_network:
+    name: inception_network
+    driver: bridge
+
+############################################
+# ----------- Declare Services ----------- #
+############################################
+
+services:
+
+  mariadb:
+    image: mariadb
+    container_name: mariadb
+    build: ./requirements/mariadb
+    env_file:
+      - .env
+    networks:
+      - inception_network
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    restart: always
+
+  nginx:
+    image: nginx
+    container_name: nginx
+    build: ./requirements/nginx
+    depends_on:
+      - wordpress # Wait for wordpress to be up before starting
+    ports:
+      - "443:443" # Just nginx got exposed for the outside world (www)
+    networks:
+      - inception_network
+    volumes:
+      - nginx_wordpress_data:/var/www/html
+    restart: always
+
+  wordpress:
+    image: wordpress
+    container_name: wordpress
+    build: ./requirements/wordpress
+    depends_on:
+      - mariadb # Wait for mariadb to be up before starting
+    env_file:
+      - .env
+    networks:
+      - inception_network
+    volumes:
+      - nginx_wordpress_data:/var/www/html
+    restart: always
+
+############################################
+# -------------- VOLUMES ---------------- #
+############################################
+
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      device: /home/chorst/data/mariadb
+      o: bind
+      type: none
+  nginx_wordpress_data:
+    driver: local
+    driver_opts:
+      device: /home/chorst/data/wordpress
+      o: bind
+      type: none
